@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Teacher Login</title>
+
+<style>
+
+/* Page styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f6f8;
+    margin: 0;
+    height: 100vh;
+}
+
+/* Back button container */
+.top-bar {
+    padding: 15px 20px;
+}
+
+/* Back button */
+.back-button {
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+/* Center container */
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 80vh;
+}
+
+/* Input fields */
+input {
+    padding: 12px;
+    font-size: 16px;
+    width: 260px;
+    margin-top: 10px;
+}
+
+/* Login button */
+.login-button {
+    margin-top: 20px;
+    padding: 12px 24px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Error message */
+.error {
+    margin-top: 10px;
+    color: red;
+    height: 20px;
+}
+
+/* Loading message */
+.loading {
+    margin-top: 10px;
+    color: blue;
+    height: 20px;
+}
+
+</style>
+
+</head>
+<body>
+
+<!-- Student sign in button -->
+<div class="top-bar">
+    <button class="back-button" onclick="window.location.href='student_Login.html'">
+        Student Sign In
+    </button>
+</div>
+
+<!-- Main login container -->
+<div class="container">
+
+    <h2>Teacher Sign In</h2>
+
+    <input
+        type="text"
+        id="teacherIDInput"
+        placeholder="Username"
+    >
+
+    <input
+        type="password"
+        id="passwordInput"
+        placeholder="Password"
+    >
+
+    <button
+        class="login-button"
+        onclick="teacherLogin()">
+        Sign In
+    </button>
+
+    <div id="errorMessage" class="error"></div>
+
+    <div id="loadingMessage" class="loading"></div>
+
+</div>
+
+
+<script>
+
+/*
+Frontend state variables
+*/
+let teacher_ID = "";
+let password = "";
+let authToken = "";
+
+
+/*
+Teacher login function
+*/
+async function teacherLogin() {
+
+    const errorDiv = document.getElementById("errorMessage");
+    const loadingDiv = document.getElementById("loadingMessage");
+
+    teacher_ID = document
+        .getElementById("teacherIDInput")
+        .value
+        .trim();
+
+    password = document
+        .getElementById("passwordInput")
+        .value
+        .trim();
+
+
+    /* Validation */
+    if (teacher_ID === "" || password === "") {
+
+        errorDiv.textContent =
+            "Please enter username and password.";
+
+        return;
+
+    }
+
+    errorDiv.textContent = "";
+    loadingDiv.textContent = "Signing in...";
+
+
+    try {
+
+        /*
+        BACKEND CONNECTION POINT
+
+        Spring Boot endpoint example:
+        POST http://localhost:8080/api/auth/login
+        */
+
+        const response = await fetch(
+            "http://localhost:8080/api/auth/login",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    teacher_ID: teacher_ID,
+                    password: password
+                })
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        /*
+        Expected backend response:
+
+        {
+            success: true,
+            authToken: "abc123",
+            message: "Login successful"
+        }
+        */
+
+
+        if (data.success) {
+
+            authToken = data.authToken;
+
+            /* Store token for future requests */
+            localStorage.setItem("authToken", authToken);
+
+            loadingDiv.textContent = "";
+
+            /* Redirect to teacher dashboard */
+            window.location.href = "teacher-dashboard.html";
+
+        }
+        else {
+
+            loadingDiv.textContent = "";
+
+            errorDiv.textContent =
+                data.message || "Login failed.";
+
+        }
+
+    }
+    catch (error) {
+
+        loadingDiv.textContent = "";
+
+        errorDiv.textContent =
+            "Unable to connect to server.";
+
+        console.error(error);
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
