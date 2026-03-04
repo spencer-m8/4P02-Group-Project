@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teacher Login</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 6px;
+            width: 320px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .loading {
+            color: blue;
+            margin-top: 10px;
+        }
+    </style>
+
+</head>
+<body>
+
+<div class="container">
+
+    <h2>Teacher Login</h2>
+
+    Teacher ID / Email:
+
+    <input
+            type="text"
+            id="teacherIDInput"
+            placeholder="Enter Teacher ID"
+    >
+
+    Password:
+
+    <input
+            type="password"
+            id="passwordInput"
+            placeholder="Enter Password"
+    >
+
+    <button onclick="teacherLogin()">
+        Sign In
+    </button>
+
+    <div id="errorMessage" class="error"></div>
+
+    <div id="loadingMessage" class="loading"></div>
+
+</div>
+
+
+<script>
+
+    /*
+    Frontend state variables
+    */
+    let teacher_ID = "";
+    let password = "";
+    let authToken = "";
+
+
+    /*
+    Teacher login function
+    */
+    async function teacherLogin() {
+
+        const errorDiv = document.getElementById("errorMessage");
+        const loadingDiv = document.getElementById("loadingMessage");
+
+        teacher_ID = document
+            .getElementById("teacherIDInput")
+            .value
+            .trim();
+
+        password = document
+            .getElementById("passwordInput")
+            .value
+            .trim();
+
+        /* Validation */
+        if (teacher_ID === "" || password === "") {
+            errorDiv.textContent = "Please enter username and password.";
+            return;
+        }
+
+        errorDiv.textContent = "";
+        loadingDiv.textContent = "Signing in...";
+
+        try {
+            const response = await fetch(
+                "/api/auth/login",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: teacher_ID,     // <-- FIX: backend expects "email"
+                        password: password
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Keep existing key name used by your teammate: authToken
+                authToken = data.authToken || data.token || "";
+
+                localStorage.setItem("authToken", authToken);
+
+                loadingDiv.textContent = "";
+
+                // Fix casing to match actual file name
+                window.location.href = "teacher-Dashboard.html";
+            } else {
+                loadingDiv.textContent = "";
+                errorDiv.textContent = data.message || "Login failed.";
+            }
+
+        } catch (error) {
+            loadingDiv.textContent = "";
+            errorDiv.textContent = "Unable to connect to server.";
+            console.error(error);
+        }
+    }
+
+</script>
+
+</body>
+</html>

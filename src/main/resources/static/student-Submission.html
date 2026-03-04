@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Submission</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f6f8;
+        }
+
+        /* Top bar */
+        .top-bar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+        }
+
+        /* Back button */
+        .back-button {
+            float: right;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+
+        /* Main container */
+        .container {
+            padding: 20px;
+        }
+
+        /* Section */
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 400px;
+        }
+
+        /* Inputs */
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        /* Submit button */
+        .submit-button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        /* Messages */
+        .success {
+            color: green;
+            margin-top: 10px;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .loading {
+            color: blue;
+            margin-top: 10px;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<div class="top-bar">
+
+    Student Submission
+
+    <button class="back-button" onclick="goBack()">
+        Change Assignment
+    </button>
+
+</div>
+
+
+<div class="container">
+
+    <div class="section">
+
+        <h3 id="assignmentDisplay"></h3>
+
+        Student Number:
+
+        <input
+                type="text"
+                id="studentNumberInput"
+                placeholder="Enter your student number"
+        >
+
+        Upload ZIP File:
+
+        <input
+                type="file"
+                id="fileInput"
+                accept=".zip"
+        >
+
+        <button
+                class="submit-button"
+                onclick="submitFile()">
+            Submit
+        </button>
+
+        <div id="successMessage" class="success"></div>
+        <div id="errorMessage" class="error"></div>
+        <div id="loadingMessage" class="loading"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    /*
+    State variables
+    */
+    let assignmentKey = "";
+    let studentNumber = "";
+    let submissionFile = null;
+
+
+    /*
+    Extract assignmentKey from URL
+    Example:
+    student-Submission.html?assignmentKey=1234567890
+    */
+    function getAssignmentKeyFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("assignmentKey");
+    }
+
+
+    /*
+    Initialize page
+    */
+    window.onload = function() {
+
+        assignmentKey = getAssignmentKeyFromURL();
+
+        if (!assignmentKey) {
+            window.location.href = "student_Login.html";
+            return;
+        }
+
+        document.getElementById("assignmentDisplay").textContent =
+            "Assignment Key: " + assignmentKey;
+    }
+
+
+    /*
+    Back button
+    */
+    function goBack() {
+        window.location.href = "student_Login.html";
+    }
+
+
+    /*
+    Submit file
+    */
+    async function submitFile() {
+
+        const successDiv = document.getElementById("successMessage");
+        const errorDiv = document.getElementById("errorMessage");
+        const loadingDiv = document.getElementById("loadingMessage");
+
+        studentNumber =
+            document.getElementById("studentNumberInput")
+            .value
+            .trim();
+
+        submissionFile =
+            document.getElementById("fileInput")
+            .files[0];
+
+        successDiv.textContent = "";
+        errorDiv.textContent = "";
+
+        /* Validation */
+        if (!studentNumber) {
+            errorDiv.textContent = "Please enter your student number.";
+            return;
+        }
+
+        if (!submissionFile) {
+            errorDiv.textContent = "Please select a ZIP file.";
+            return;
+        }
+
+        if (!submissionFile.name.toLowerCase().endsWith(".zip")) {
+            errorDiv.textContent = "Only ZIP files are allowed.";
+            return;
+        }
+
+        loadingDiv.textContent = "Uploading...";
+
+        try {
+            const formData = new FormData();
+
+            // Match the student-friendly adapter endpoint fields
+            formData.append("assignmentKey", assignmentKey);
+            formData.append("studentNumber", studentNumber);
+
+            // Field name is "file" (common convention for MultipartFile @RequestPart("file"))
+            formData.append("file", submissionFile);
+
+            const response = await fetch(
+                "/api/submissions/upload",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            const data = await response.json();
+
+            loadingDiv.textContent = "";
+
+            if (data.success) {
+                successDiv.textContent = "Submission successful.";
+            } else {
+                errorDiv.textContent = data.message || "Upload failed.";
+            }
+
+        } catch (error) {
+            loadingDiv.textContent = "";
+            errorDiv.textContent = "Server error.";
+            console.error(error);
+        }
+
+    }
+
+</script>
+
+</body>
+</html>
