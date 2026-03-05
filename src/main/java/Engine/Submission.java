@@ -1,6 +1,5 @@
 package Engine;
 
-import java.util.Set;
 import java.util.List;
 
 public class Submission {
