@@ -1,14 +1,14 @@
 package Engine;
 
 import java.util.*;
-public class FingerprintGenerator {
+public class GenerateFingerprints {
 
     public static List<Integer> hashes(String code, int K) {
 
-        List<Integer> fingerprints = new ArrayList<>();
+        List<Integer> hashes = new ArrayList<>();
 
         if (code == null || code.isEmpty()) {
-            return fingerprints;
+            return hashes;
         }
 
         //tokenize
@@ -25,16 +25,19 @@ public class FingerprintGenerator {
 
             int hash = gram.toString().hashCode();
 
-            fingerprints.add(hash);
+            hashes.add(hash);
         }
-        return fingerprints;
+        return hashes;
     }
 
-    public static List<Integer> fingerprint(List<Integer> hashes, int wSize) {
-        List<Integer> FingerPrint = new ArrayList<>();
+    public static List<int[]> fingerprint(List<Integer> hashes, int wSize) {
+        List<int[]> FingerPrint = new ArrayList<>();
 
         if(hashes.size() < wSize) {
-            return hashes;
+            for (int i = 0; i < hashes.size(); i++) {
+                FingerPrint.add(new int[]{hashes.get(i),i});
+            }
+            return FingerPrint;
         }
 
         int minIndex = 0;
@@ -44,18 +47,17 @@ public class FingerprintGenerator {
             int currentMinIndex = i;
 
             for (int j = i; j < i + wSize && j < hashes.size(); j++) {
-                if (hashes.get(j) <minHash) {
+                if (hashes.get(j) <= minHash) {
                     minHash = hashes.get(j);
                     currentMinIndex = j;
                 }
             }
 
-            if (currentMinIndex > minIndex || i == 0) {
-                FingerPrint.add(hashes.get(currentMinIndex));
+            if (currentMinIndex > minIndex) {
+                FingerPrint.add(new int[]{hashes.get(currentMinIndex),currentMinIndex});
                 minIndex = currentMinIndex;
             }
         }
-
         return FingerPrint;
     }
 }

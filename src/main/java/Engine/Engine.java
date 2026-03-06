@@ -6,7 +6,7 @@ import java.util.List;
 
 
 import static Engine.ReadZip.*;
-import static Engine.FingerprintGenerator.*;
+import static Engine.GenerateFingerprints.*;
 
 
 
@@ -32,6 +32,7 @@ public class Engine {
         }
         return submissions;
     }
+
 
 
     //will update this once we integrate cloud storage, such that it will check to see if a zip has already been analyzed

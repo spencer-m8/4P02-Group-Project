@@ -8,7 +8,7 @@ public class Submission {
     private String language;
     private String code;
     private List<Integer> hashes;
-    private List<Integer> fingerprint;
+    private List<int[]> fingerprint;
 
 
     public Submission(String ID, String language, String code) {
@@ -26,8 +26,8 @@ public class Submission {
     public String getCode() { return code; }
     public void addHashes(List<Integer> hashes){this.hashes = hashes;}
     public List<Integer> getHashes(){return  hashes;}
-    public void addFingerprint(List<Integer> fingerprint){this.fingerprint = fingerprint;}
-    public List<Integer> getFingerprint(){return  fingerprint;}
+    public void addFingerprint(List<int[]> fingerprint){this.fingerprint = fingerprint;}
+    public List<int[]> getFingerprint(){return  fingerprint;}
 
 
 }
