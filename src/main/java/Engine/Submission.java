@@ -25,9 +25,4 @@ public class Submission {
     public void addFingerprint(List<int[]> fingerprint){this.fingerprint = fingerprint;this.fingerPrintSize = fingerprint.size();}
     public List<int[]> getFingerprint(){return  fingerprint;}
     public int getFingerPrintSize(){return fingerPrintSize;}
-
-
-
-
-
 }
