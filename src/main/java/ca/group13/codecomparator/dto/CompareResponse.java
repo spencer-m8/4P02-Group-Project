@@ -8,6 +8,8 @@ public class CompareResponse {
 
     private String student1SubmissionId;
     private String student2SubmissionId;
+    private String student1ZipKey;
+    private String student2ZipKey;
 
     public CompareResponse() {
     }
@@ -50,5 +52,21 @@ public class CompareResponse {
 
     public void setStudent2SubmissionId(String student2SubmissionId) {
         this.student2SubmissionId = student2SubmissionId;
+    }
+
+    public String getStudent1ZipKey() {
+        return student1ZipKey;
+    }
+
+    public void setStudent1ZipKey(String student1ZipKey) {
+        this.student1ZipKey = student1ZipKey;
+    }
+
+    public String getStudent2ZipKey() {
+        return student2ZipKey;
+    }
+
+    public void setStudent2ZipKey(String student2ZipKey) {
+        this.student2ZipKey = student2ZipKey;
     }
 }

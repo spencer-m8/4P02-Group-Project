@@ -6,61 +6,146 @@
 
     <style>
 
-        /* Page layout */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             background-color: #f4f6f8;
         }
 
-        /* Header bar */
+        /* Header */
         .header {
             background-color: #2c3e50;
             color: white;
             padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header span {
+            font-size: 18px;
+            font-weight: bold;
         }
 
         .logout-button {
-            float: right;
             padding: 8px 14px;
             cursor: pointer;
         }
 
-        /* Main container */
-        .container {
-            padding: 20px;
+        /* Class selector — centered */
+        .class-section {
+            text-align: center;
+            padding: 24px 20px 10px;
         }
 
-        /* Dropdown */
-        select {
+        .class-section label {
+            font-weight: bold;
+            font-size: 15px;
+            margin-right: 10px;
+        }
+
+        .class-section select {
             padding: 10px;
-            margin-top: 10px;
-            width: 300px;
+            width: 260px;
+            font-size: 14px;
         }
 
-        button {
-            padding: 10px 16px;
+        /* Two-column student selectors */
+        .students-row {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            padding: 16px 40px 0;
+        }
+
+        .student-col {
+            display: flex;
+            flex-direction: column;
+            min-width: 220px;
+        }
+
+        .student-col label {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .student-col select {
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        /* Compare button */
+        .compare-section {
+            text-align: center;
+            padding: 18px;
+        }
+
+        .compare-section button {
+            padding: 10px 32px;
             cursor: pointer;
-            margin-top: 15px;
+            font-size: 15px;
         }
 
-        /* Output */
-        .output {
-            margin-top: 20px;
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            max-width: 700px;
+        /* Status messages */
+        .status-row {
+            text-align: center;
+            min-height: 24px;
         }
 
         .error {
             color: red;
-            margin-top: 10px;
+            font-size: 14px;
         }
 
         .loading {
-            color: blue;
-            margin-top: 10px;
+            color: #2980b9;
+            font-size: 14px;
+        }
+
+        /* Similarity display */
+        .similarity-display {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 12px 0 4px;
+        }
+
+        /* Two file-content boxes */
+        .files-row {
+            display: flex;
+            gap: 20px;
+            padding: 16px 40px 40px;
+        }
+
+        .file-box {
+            flex: 1;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 12px;
+            min-width: 0;
+        }
+
+        .file-box h4 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            color: #555;
+            word-break: break-all;
+        }
+
+        .file-box pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 12px;
+            font-family: "Courier New", monospace;
+            max-height: 450px;
+            overflow-y: auto;
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
         }
 
     </style>
@@ -69,44 +154,63 @@
 <body>
 
 <div class="header">
+    <span>Teacher Dashboard</span>
+    <button class="logout-button" onclick="logout()">Logout</button>
+</div>
 
-    Teacher Dashboard
 
-    <button class="logout-button" onclick="logout()">
-        Logout
-    </button>
+<!-- Class selector — centered at top -->
+<div class="class-section">
+    <label for="classDropdown">Select Class:</label>
+    <select id="classDropdown" onchange="loadStudents()">
+        <option value="">-- Select Class --</option>
+    </select>
+</div>
+
+
+<!-- Student selectors — side by side -->
+<div class="students-row">
+
+    <div class="student-col">
+        <label for="student1Dropdown">Student 1</label>
+        <select id="student1Dropdown">
+            <option value="">-- Select Student --</option>
+        </select>
+    </div>
+
+    <div class="student-col">
+        <label for="student2Dropdown">Student 2</label>
+        <select id="student2Dropdown">
+            <option value="">-- Select Student --</option>
+        </select>
+    </div>
 
 </div>
 
 
-<div class="container">
+<div class="compare-section">
+    <button onclick="compareStudents()">Compare</button>
+</div>
 
-    <h3>Select Class</h3>
-
-    <select id="classDropdown" onchange="loadStudents()">
-        <option value="">-- Select Class --</option>
-    </select>
-
-    <h3>Select Students</h3>
-
-    Student 1:
-    <select id="student1Dropdown">
-        <option value="">-- Select Student --</option>
-    </select>
-
-    Student 2:
-    <select id="student2Dropdown">
-        <option value="">-- Select Student --</option>
-    </select>
-
-    <button onclick="compareStudents()">
-        Compare
-    </button>
-
+<div class="status-row">
     <div id="loadingMessage" class="loading"></div>
     <div id="errorMessage" class="error"></div>
+</div>
 
-    <div id="output" class="output" style="display:none;"></div>
+<div id="similarityDisplay" class="similarity-display" style="display:none;"></div>
+
+<!-- File content boxes — hidden until a compare runs -->
+<div class="files-row" id="filesRow" style="display:none;">
+
+    <div class="file-box">
+        <h4 id="fileBox1Label">Student 1</h4>
+        <pre id="fileBox1"></pre>
+    </div>
+
+    <div class="file-box">
+        <h4 id="fileBox2Label">Student 2</h4>
+        <pre id="fileBox2"></pre>
+    </div>
 
 </div>
 
@@ -116,57 +220,38 @@
     let authToken = localStorage.getItem("authToken") || "";
 
 
-    /*
-    Load classes on page load
-    */
     window.onload = function() {
         if (!authToken) {
-            // Fix casing to match actual file name
             window.location.href = "teacher-Login.html";
             return;
         }
-
         loadClasses();
     };
 
 
-    /*
-    Logout function
-    */
     function logout() {
         localStorage.removeItem("authToken");
         window.location.href = "teacher-Login.html";
     }
 
 
-    /*
-    Fetch list of classes
-    */
     async function loadClasses() {
 
-        const errorDiv = document.getElementById("errorMessage");
+        const errorDiv   = document.getElementById("errorMessage");
         const loadingDiv = document.getElementById("loadingMessage");
-        const dropdown = document.getElementById("classDropdown");
+        const dropdown   = document.getElementById("classDropdown");
 
-        errorDiv.textContent = "";
+        errorDiv.textContent   = "";
         loadingDiv.textContent = "Loading classes...";
 
         try {
-            const response = await fetch(
-                "/api/classes",
-                {
-                    headers: {
-                        "Authorization": "Bearer " + authToken
-                    }
-                }
-            );
+            const response = await fetch("/api/classes", {
+                headers: { "Authorization": "Bearer " + authToken }
+            });
 
             const data = await response.json();
-
             loadingDiv.textContent = "";
-
-            dropdown.innerHTML =
-                '<option value="">-- Select Class --</option>';
+            dropdown.innerHTML = '<option value="">-- Select Class --</option>';
 
             if (Array.isArray(data)) {
                 data.forEach(c => {
@@ -187,43 +272,32 @@
     }
 
 
-    /*
-    Fetch students for selected class
-    */
     async function loadStudents() {
 
-        const classCode =
-            document.getElementById("classDropdown").value;
-
-        const student1 = document.getElementById("student1Dropdown");
-        const student2 = document.getElementById("student2Dropdown");
-        const errorDiv = document.getElementById("errorMessage");
+        const classCode  = document.getElementById("classDropdown").value;
+        const student1   = document.getElementById("student1Dropdown");
+        const student2   = document.getElementById("student2Dropdown");
+        const errorDiv   = document.getElementById("errorMessage");
         const loadingDiv = document.getElementById("loadingMessage");
 
         errorDiv.textContent = "";
-        document.getElementById("output").style.display = "none";
+        document.getElementById("similarityDisplay").style.display = "none";
+        document.getElementById("filesRow").style.display = "none";
 
         student1.innerHTML = '<option value="">-- Select Student --</option>';
         student2.innerHTML = '<option value="">-- Select Student --</option>';
 
-        if (!classCode) {
-            return;
-        }
+        if (!classCode) return;
 
         loadingDiv.textContent = "Loading students...";
 
         try {
             const response = await fetch(
                 "/api/class/students?classCode=" + encodeURIComponent(classCode),
-                {
-                    headers: {
-                        "Authorization": "Bearer " + authToken
-                    }
-                }
+                { headers: { "Authorization": "Bearer " + authToken } }
             );
 
             const data = await response.json();
-
             loadingDiv.textContent = "";
 
             if (Array.isArray(data)) {
@@ -250,21 +324,38 @@
     }
 
 
-    /*
-    Compare students
-    */
+    async function fetchSourceText(zipKey) {
+        try {
+            const response = await fetch(
+                "/api/submissions/source?zipKey=" + encodeURIComponent(zipKey),
+                { headers: { "Authorization": "Bearer " + authToken } }
+            );
+
+            if (!response.ok) return "(Could not load file content)";
+
+            const data = await response.json();
+            return data.text || "(No source files found in ZIP)";
+
+        } catch (e) {
+            return "(Error loading file content)";
+        }
+    }
+
+
     async function compareStudents() {
 
         const classCode = document.getElementById("classDropdown").value;
-        const s1 = document.getElementById("student1Dropdown").value;
-        const s2 = document.getElementById("student2Dropdown").value;
+        const s1        = document.getElementById("student1Dropdown").value;
+        const s2        = document.getElementById("student2Dropdown").value;
 
-        const output = document.getElementById("output");
-        const errorDiv = document.getElementById("errorMessage");
-        const loadingDiv = document.getElementById("loadingMessage");
+        const similarityDisplay = document.getElementById("similarityDisplay");
+        const filesRow          = document.getElementById("filesRow");
+        const errorDiv          = document.getElementById("errorMessage");
+        const loadingDiv        = document.getElementById("loadingMessage");
 
         errorDiv.textContent = "";
-        output.style.display = "none";
+        similarityDisplay.style.display = "none";
+        filesRow.style.display = "none";
 
         if (!classCode || !s1 || !s2) {
             errorDiv.textContent = "Please select a class and two students.";
@@ -279,32 +370,51 @@
         loadingDiv.textContent = "Comparing...";
 
         try {
-            const response = await fetch(
-                "/api/compare",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer " + authToken
-                    },
-                    body: JSON.stringify({
-                        classCode: classCode,
-                        student1: s1,
-                        student2: s2
-                    })
-                }
-            );
+            const response = await fetch("/api/compare", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + authToken
+                },
+                body: JSON.stringify({ classCode, student1: s1, student2: s2 })
+            });
 
             const data = await response.json();
-
             loadingDiv.textContent = "";
 
-            if (data && data.success) {
-                output.style.display = "block";
-                output.textContent =
-                    "Similarity: " + (data.similarityPercent ?? "N/A") + "%";
-            } else {
+            if (!data || !data.success) {
                 errorDiv.textContent = data.message || "Compare failed.";
+                return;
+            }
+
+            /* Similarity score */
+            const pct = data.similarityPercent != null
+                ? data.similarityPercent.toFixed(1) + "%"
+                : "Pending";
+            similarityDisplay.textContent = "Similarity: " + pct;
+            similarityDisplay.style.display = "block";
+
+            /* Show file boxes and load content */
+            filesRow.style.display = "flex";
+            document.getElementById("fileBox1Label").textContent = "Student 1 — " + s1;
+            document.getElementById("fileBox2Label").textContent = "Student 2 — " + s2;
+            document.getElementById("fileBox1").textContent = "Loading...";
+            document.getElementById("fileBox2").textContent = "Loading...";
+
+            if (data.student1ZipKey) {
+                fetchSourceText(data.student1ZipKey).then(text => {
+                    document.getElementById("fileBox1").textContent = text;
+                });
+            } else {
+                document.getElementById("fileBox1").textContent = "(No file key returned)";
+            }
+
+            if (data.student2ZipKey) {
+                fetchSourceText(data.student2ZipKey).then(text => {
+                    document.getElementById("fileBox2").textContent = text;
+                });
+            } else {
+                document.getElementById("fileBox2").textContent = "(No file key returned)";
             }
 
         } catch (error) {

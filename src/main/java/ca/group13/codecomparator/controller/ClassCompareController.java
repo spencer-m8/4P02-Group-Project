@@ -86,6 +86,11 @@ public class ClassCompareController {
         out.setStudent1SubmissionId(s1 == null ? null : s1.toString());
         out.setStudent2SubmissionId(s2 == null ? null : s2.toString());
 
+        Object z1 = res.get("student1ZipKey");
+        Object z2 = res.get("student2ZipKey");
+        out.setStudent1ZipKey(z1 == null ? null : z1.toString());
+        out.setStudent2ZipKey(z2 == null ? null : z2.toString());
+
         return out;
     }
 }

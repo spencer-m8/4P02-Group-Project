@@ -133,7 +133,6 @@
             const data = await response.json();
 
             if (data.success) {
-                // Keep existing key name used by your teammate: authToken
                 authToken = data.authToken || data.token || "";
 
                 localStorage.setItem("authToken", authToken);

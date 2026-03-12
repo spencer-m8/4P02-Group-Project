@@ -68,7 +68,7 @@ public class ClassCompareService {
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("success", true);
-        out.put("similarityScore", similarityPercent);
+        out.put("similarityPercent", similarityPercent);
         out.put("message", similarityPercent == null ? "Similarity not computed yet (engine pending)" : "");
         out.put("student1SubmissionId", a.submissionId.toString());
         out.put("student2SubmissionId", b.submissionId.toString());

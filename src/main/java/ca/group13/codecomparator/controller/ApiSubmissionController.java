@@ -3,6 +3,8 @@ package ca.group13.codecomparator.controller;
 import ca.group13.codecomparator.dto.SubmissionUploadRequest;
 import ca.group13.codecomparator.dto.SubmissionUploadResponse;
 import ca.group13.codecomparator.service.SubmissionUploadService;
+import com.azure.storage.blob.BlobServiceClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,8 +13,10 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -23,10 +27,14 @@ public class ApiSubmissionController {
 
     private final JdbcTemplate jdbc;
     private final SubmissionUploadService uploadService;
+    private final BlobServiceClient blobServiceClient;
+    private final String zipContainer;
 
-    public ApiSubmissionController(JdbcTemplate jdbc, SubmissionUploadService uploadService) {
+    public ApiSubmissionController(JdbcTemplate jdbc, SubmissionUploadService uploadService, BlobServiceClient blobServiceClient, @Value("${app.storage.containers.zips:zips}") String zipContainer) {
         this.jdbc = jdbc;
         this.uploadService = uploadService;
+        this.blobServiceClient = blobServiceClient;
+        this.zipContainer = zipContainer;
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -82,6 +90,48 @@ public class ApiSubmissionController {
         out.setZipSha256(core.get("zipSha256") == null ? null : core.get("zipSha256").toString());
 
         return out;
+    }
+
+    @GetMapping("/source")
+    public Map<String, Object> source(@RequestParam("zipKey") String zipKey) {
+        if (zipKey == null || zipKey.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "zipKey is required");
+        }
+
+        var blob = blobServiceClient.getBlobContainerClient(zipContainer).getBlobClient(zipKey.trim());
+
+        if (!blob.exists()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Submission not found");
+        }
+
+        byte[] zipBytes;
+        try (var stream = blob.openInputStream()) {
+            zipBytes = stream.readAllBytes();
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not read submission");
+        }
+
+        Set<String> sourceExts = Set.of(".java", ".c", ".cpp", ".cc", ".cxx", ".hpp", ".hh", ".hxx", ".h");
+        StringBuilder sb = new StringBuilder();
+
+        try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            while ((entry = zin.getNextEntry()) != null) {
+                if (entry.isDirectory()) continue;
+                String name = entry.getName();
+                String lower = name.toLowerCase(Locale.ROOT);
+                boolean isSource = sourceExts.stream().anyMatch(lower::endsWith);
+                if (isSource) {
+                    if (sb.length() > 0) sb.append("\n\n");
+                    sb.append("// --- ").append(name).append(" ---\n");
+                    sb.append(new String(zin.readAllBytes(), StandardCharsets.UTF_8));
+                }
+            }
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not read ZIP contents");
+        }
+
+        return Map.of("text", sb.toString());
     }
 
     private static String findLang(byte[] zipBytes) {
