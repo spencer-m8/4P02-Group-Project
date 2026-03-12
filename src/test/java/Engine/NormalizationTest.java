@@ -17,7 +17,7 @@ class NormalizationTest {
     @Test
     public void testStripName_CommentSecondLine() {
         String code = "public class Test{\n int x=1;//this is a commment \n}";
-        assertEquals(code, Normalization.stripName(code));
+        assertEquals(code, normalization.stripName(code));
     }
 
     @Test

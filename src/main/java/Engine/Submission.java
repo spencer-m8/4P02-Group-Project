@@ -1,33 +1,33 @@
 package Engine;
 
+
 import java.util.List;
 
 public class Submission {
 
-    private String ID;
-    private String language;
-    private String code;
-    private List<Integer> hashes;
+    private final String ID;
+    private final String language;
+
     private List<int[]> fingerprint;
+    private int fingerPrintSize;
 
 
-    public Submission(String ID, String language, String code) {
+    public Submission(String ID, String language, List<int[]> fingerprint) {
         this.ID = ID;
         this.language = language;
-        this.code = code;
+        this.fingerprint = fingerprint;
     }
 
 
-    public void addID (String ID) {this.ID = ID;}
     public String getID() { return ID; }
-    public void addLanguage(String language) {this.language = language;}
     public String getLanguage() { return language; }
-    public void removeCode() {this.code = null;}
-    public String getCode() { return code; }
-    public void addHashes(List<Integer> hashes){this.hashes = hashes;}
-    public List<Integer> getHashes(){return  hashes;}
-    public void addFingerprint(List<int[]> fingerprint){this.fingerprint = fingerprint;}
+
+    public void addFingerprint(List<int[]> fingerprint){this.fingerprint = fingerprint;this.fingerPrintSize = fingerprint.size();}
     public List<int[]> getFingerprint(){return  fingerprint;}
+    public int getFingerPrintSize(){return fingerPrintSize;}
+
+
+
 
 
 }
