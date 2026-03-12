@@ -122,6 +122,7 @@
 </div>
 
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 
     /*
@@ -130,6 +131,18 @@
     let assignmentKey = "";
     let studentNumber = "";
     let submissionFile = null;
+
+    const LANGUAGE_EXTENSIONS = {
+        JAVA: [".java"],
+        C: [".c", ".h"],
+        CPP: [".cpp", ".cc", ".cxx", ".hpp", ".hh", ".hxx", ".h"]
+    };
+
+    const COMMENT_PREFIX = {
+        JAVA: "//",
+        C: "//",
+        CPP: "//"
+    };
 
 
     /*
@@ -164,7 +177,231 @@
     Back button
     */
     function goBack() {
-        window.location.href = "student_Login.html";
+        window.location.href = "index.html";
+    }
+
+
+    function hasExtension(fileName, extensions) {
+        const lowerName = fileName.toLowerCase();
+        return extensions.some(extension => lowerName.endsWith(extension));
+    }
+
+
+    function inferLanguageFromZip(zip) {
+        let hasJava = false;
+        let hasC = false;
+        let hasCpp = false;
+
+        for (const zipEntry of Object.values(zip.files)) {
+            if (zipEntry.dir) {
+                continue;
+            }
+
+            const fileName = zipEntry.name.toLowerCase();
+
+            if (fileName.endsWith(".java")) {
+                hasJava = true;
+            }
+
+            if (fileName.endsWith(".c")) {
+                hasC = true;
+            }
+
+            if (
+                fileName.endsWith(".cpp") ||
+                fileName.endsWith(".cc") ||
+                fileName.endsWith(".cxx") ||
+                fileName.endsWith(".hpp") ||
+                fileName.endsWith(".hh") ||
+                fileName.endsWith(".hxx")
+            ) {
+                hasCpp = true;
+            }
+        }
+
+        const signals = Number(hasJava) + Number(hasC) + Number(hasCpp);
+
+        if (signals === 0) {
+            throw new Error("ZIP does not contain Java/C/C++ source files.");
+        }
+
+        if ((hasJava && (hasC || hasCpp)) || (hasCpp && hasC)) {
+            throw new Error("ZIP appears to contain multiple languages. Please upload only one language.");
+        }
+
+        if (hasJava) {
+            return "JAVA";
+        }
+
+        if (hasCpp) {
+            return "CPP";
+        }
+
+        return "C";
+    }
+
+
+    function isSourceFileForLanguage(fileName, language) {
+        const extensions = LANGUAGE_EXTENSIONS[language] || [];
+        return hasExtension(fileName, extensions);
+    }
+
+
+    function stripCommentsFromCode(code) {
+        let output = "";
+        let state = "code";
+        let escaped = false;
+
+        for (let index = 0; index < code.length; index++) {
+            const current = code[index];
+            const next = code[index + 1];
+
+            if (state === "line-comment") {
+                if (current === "\r" || current === "\n") {
+                    output += current;
+                    state = "code";
+                }
+                continue;
+            }
+
+            if (state === "block-comment") {
+                if (current === "*" && next === "/") {
+                    index += 1;
+                    state = "code";
+                    continue;
+                }
+
+                if (current === "\r" || current === "\n") {
+                    output += current;
+                }
+                continue;
+            }
+
+            if (state === "string") {
+                output += current;
+
+                if (escaped) {
+                    escaped = false;
+                } else if (current === "\\") {
+                    escaped = true;
+                } else if (current === '"') {
+                    state = "code";
+                }
+                continue;
+            }
+
+            if (state === "char") {
+                output += current;
+
+                if (escaped) {
+                    escaped = false;
+                } else if (current === "\\") {
+                    escaped = true;
+                } else if (current === "'") {
+                    state = "code";
+                }
+                continue;
+            }
+
+            if (current === "/" && next === "/") {
+                state = "line-comment";
+                index += 1;
+                continue;
+            }
+
+            if (current === "/" && next === "*") {
+                state = "block-comment";
+                index += 1;
+                continue;
+            }
+
+            if (current === '"') {
+                state = "string";
+                output += current;
+                continue;
+            }
+
+            if (current === "'") {
+                state = "char";
+                output += current;
+                continue;
+            }
+
+            output += current;
+        }
+
+        return output;
+    }
+
+
+    function prependStudentNumberComment(code, language, studentNumberValue) {
+        const prefix = COMMENT_PREFIX[language] || "//";
+        const withoutBom = code.startsWith("\uFEFF") ? code.slice(1) : code;
+        return `${prefix} Student Number: ${studentNumberValue}\n${withoutBom}`;
+    }
+
+
+    async function buildSanitizedZip(file, studentNumberValue) {
+        if (typeof JSZip === "undefined") {
+            throw new Error("ZIP processing library failed to load.");
+        }
+
+        const originalZip = await JSZip.loadAsync(file);
+        const language = inferLanguageFromZip(originalZip);
+        const sanitizedZip = new JSZip();
+
+        for (const zipEntry of Object.values(originalZip.files)) {
+            if (zipEntry.dir) {
+                sanitizedZip.folder(zipEntry.name);
+                continue;
+            }
+
+            if (isSourceFileForLanguage(zipEntry.name, language)) {
+                const code = await zipEntry.async("string");
+                const sanitizedCode = prependStudentNumberComment(
+                    stripCommentsFromCode(code),
+                    language,
+                    studentNumberValue
+                );
+
+                sanitizedZip.file(zipEntry.name, sanitizedCode);
+                continue;
+            }
+
+            const originalBytes = await zipEntry.async("uint8array");
+            sanitizedZip.file(zipEntry.name, originalBytes);
+        }
+
+        const sanitizedBlob = await sanitizedZip.generateAsync({
+            type: "blob",
+            compression: "DEFLATE"
+        });
+
+        return new File([sanitizedBlob], file.name, { type: "application/zip" });
+    }
+
+
+    async function getResponseErrorMessage(response, fallbackMessage) {
+        const contentType = response.headers.get("content-type") || "";
+
+        if (contentType.includes("application/json")) {
+            const data = await response.json().catch(() => null);
+
+            if (data && typeof data.message === "string" && data.message.trim()) {
+                return data.message;
+            }
+
+            if (data && typeof data.error === "string" && data.error.trim()) {
+                return data.error;
+            }
+        }
+
+        const text = await response.text().catch(() => "");
+        if (text.trim()) {
+            return text.trim();
+        }
+
+        return fallbackMessage;
     }
 
 
@@ -205,7 +442,15 @@
             return;
         }
 
-        loadingDiv.textContent = "Uploading...";
+        let fileToUpload = submissionFile;
+        loadingDiv.textContent = "Preparing ZIP locally...";
+
+        try {
+            fileToUpload = await buildSanitizedZip(submissionFile, studentNumber);
+        } catch (error) {
+            console.error(error);
+            loadingDiv.textContent = "ZIP preprocessing unavailable. Uploading original ZIP...";
+        }
 
         try {
             const formData = new FormData();
@@ -215,7 +460,12 @@
             formData.append("studentNumber", studentNumber);
 
             // Field name is "file" (common convention for MultipartFile @RequestPart("file"))
-            formData.append("file", submissionFile);
+            formData.append("file", fileToUpload);
+
+            loadingDiv.textContent =
+                fileToUpload === submissionFile
+                ? "Uploading ZIP..."
+                : "Uploading sanitized ZIP...";
 
             const response = await fetch(
                 "/api/submissions/upload",
@@ -225,19 +475,24 @@
                 }
             );
 
-            const data = await response.json();
-
             loadingDiv.textContent = "";
 
-            if (data.success) {
+            if (response.ok) {
                 successDiv.textContent = "Submission successful.";
-            } else {
-                errorDiv.textContent = data.message || "Upload failed.";
+                return;
             }
+
+            errorDiv.textContent = await getResponseErrorMessage(
+                response,
+                "Upload failed."
+            );
 
         } catch (error) {
             loadingDiv.textContent = "";
-            errorDiv.textContent = "Server error.";
+            errorDiv.textContent =
+                error instanceof Error && error.message
+                ? error.message
+                : "Unable to connect to server.";
             console.error(error);
         }
 
