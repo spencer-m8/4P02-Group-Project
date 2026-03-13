@@ -58,8 +58,8 @@ public class FingerPrintGenerator {
             return "";
         }
 
-        code = code.replaceAll("(?s)/\\*.*?\\*/", "");
-        code = code.replaceAll("//.*", "");
+        //code = code.replaceAll("(?s)/\\*.*?\\*/", "");
+        //code = code.replaceAll("//.*", "");
         code = code.replace("\t", " ");
 
         String[] lines = code.split("\n");
