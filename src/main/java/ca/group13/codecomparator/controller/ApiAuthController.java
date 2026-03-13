@@ -9,6 +9,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
+/* Handles login for instructors. Checks credentials stored in DB to confirm a valid user
+ * is trying to access the system. */
+
 @RestController
 @RequestMapping("/api/auth")
 public class ApiAuthController {

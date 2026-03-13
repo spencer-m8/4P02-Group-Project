@@ -1,12 +1,16 @@
 package ca.group13.codecomparator.service;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+/* Loads classes and students, then calls engine to perform comparison. */
 
 @Service
 public class ClassCompareService {
@@ -19,18 +23,19 @@ public class ClassCompareService {
         this.engine = engine;
     }
 
-    public Map<String, Object> listClasses() {
-        List<String> codes = jdbc.query("SELECT DISTINCT course_code FROM classes ORDER BY course_code", (rs, rowNum) -> rs.getString(1));
-
-        return Map.of("success", true, "classes", codes);
+    public List<String> listClasses() {
+        return jdbc.query(
+                "SELECT DISTINCT course_code FROM classes ORDER BY course_code",
+                (rs, rowNum) -> rs.getString(1)
+        );
     }
 
-    public Map<String, Object> listStudents(String classCode) {
+    public List<String> listStudents(String classCode) {
         if (classCode == null || classCode.isBlank()) {
-            return Map.of("success", false, "message", "classCode is required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "classCode is required");
         }
 
-        List<String> students = jdbc.query("""
+        return jdbc.query("""
                 SELECT DISTINCT s.encrypted_student
                 FROM submissions s
                 JOIN assignments a ON a.assignment_id = s.assignment_id
@@ -38,10 +43,9 @@ public class ClassCompareService {
                 WHERE c.course_code = ?
                 ORDER BY s.encrypted_student
                 """, (rs, rowNum) -> rs.getString(1), classCode.trim());
-
-        return Map.of("success", true, "students", students);
     }
 
+    // Finds most recent submission for requested students in the provided class and sends ZIP keys to engine.
     public Map<String, Object> compareSubmissions(String classCode, String student1, String student2) {
         if (classCode == null || classCode.isBlank()) {
             return Map.of("success", false, "message", "classCode is required");

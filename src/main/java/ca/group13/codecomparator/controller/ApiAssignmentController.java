@@ -8,6 +8,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+/* Ensures the entered assignment key exists and returns matching assignment info. */
+
 @RestController
 @RequestMapping("/api/assignment")
 public class ApiAssignmentController {

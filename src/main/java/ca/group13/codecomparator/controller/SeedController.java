@@ -14,7 +14,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
@@ -70,13 +69,11 @@ public class SeedController {
                 VALUES (?, ?, ?, ?, ?)
                 """, classId, "COSC4P02", "W2026", "001", instructorId);
 
-        // One assignment with a unique 10 digit key
         AssignmentSeed assignment = insertAssignment(classId, "DB Seed Assignment", "JAVA");
 
         return Map.of("success", true, "timestamp", Instant.now().toString(), "instructorId", instructorId.toString(), "classId", classId.toString(), "assignment", assignment.toMap());
     }
 
-    // Upload a small blob to confirm Azure connection
     @PostMapping("/blob")
     public Map<String, Object> seedBlobOnly() {
         try {
@@ -117,13 +114,11 @@ public class SeedController {
 
     @Transactional
     Map<String, Object> doResetAndSeed() {
-        // Clear blob containers
         List<String> cleared = new ArrayList<>();
         if (tryClearContainer(zipsContainer)) cleared.add(zipsContainer);
         if (tryClearContainer(evidenceContainer)) cleared.add(evidenceContainer);
         if (tryClearContainer(normalizedContainer)) cleared.add(normalizedContainer);
 
-        // Clear DB rows
         jdbc.execute("""
                 TRUNCATE TABLE
                   public.repository_items,
@@ -224,7 +219,7 @@ public class SeedController {
     }
 
     private static String tenD(SecureRandom r) {
-        int first = 1 + r.nextInt(9); // first digit will not be 0
+        int first = 1 + r.nextInt(9);
         StringBuilder sb = new StringBuilder(10);
         sb.append(first);
         for (int i = 0; i < 9; i++) sb.append(r.nextInt(10));
@@ -233,8 +228,6 @@ public class SeedController {
 
     private Map<String, Object> submissionFromZip(String containerName, UUID assignmentId, String language, String studentNumber) {
         UUID submissionId = UUID.randomUUID();
-
-        // Blob key inside the container
         String blobKey = "submissions/" + submissionId + ".zip";
 
         byte[] zipBytes = makeZip(language);
@@ -242,15 +235,13 @@ public class SeedController {
         BlobContainerClient container = ensureContainer(containerName);
         container.getBlobClient(blobKey).upload(new ByteArrayInputStream(zipBytes), zipBytes.length, true);
 
-        String sha = sha256Hex(zipBytes);
-
         jdbc.update("""
                 INSERT INTO submissions (
                     submission_id, assignment_id, encrypted_student,
-                    source_zip_key, zip_sha256, language
+                    source_zip_key, language
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """, submissionId, assignmentId, studentNumber, blobKey, sha, language);
+                VALUES (?, ?, ?, ?, ?)
+                """, submissionId, assignmentId, studentNumber, blobKey, language);
 
         return Map.of("submissionId", submissionId.toString(), "assignmentId", assignmentId.toString(), "studentNumber", studentNumber, "language", language, "sourceZipKey", blobKey);
     }
@@ -305,19 +296,6 @@ public class SeedController {
             return bout.toByteArray();
         } catch (Exception e) {
             throw new RuntimeException("Failed to build test zip", e);
-        }
-    }
-
-    private static String sha256Hex(byte[] bytes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(bytes);
-
-            StringBuilder sb = new StringBuilder(64);
-            for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("SHA-256 failed", e);
         }
     }
 

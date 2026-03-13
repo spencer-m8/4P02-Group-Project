@@ -10,7 +10,6 @@ public class SubmissionUploadResponse {
     private UUID assignmentId;
     private String language;
     private String sourceZipKey;
-    private String zipSha256;
 
     public SubmissionUploadResponse() {
     }
@@ -61,13 +60,5 @@ public class SubmissionUploadResponse {
 
     public void setSourceZipKey(String sourceZipKey) {
         this.sourceZipKey = sourceZipKey;
-    }
-
-    public String getZipSha256() {
-        return zipSha256;
-    }
-
-    public void setZipSha256(String zipSha256) {
-        this.zipSha256 = zipSha256;
     }
 }

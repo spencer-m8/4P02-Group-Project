@@ -5,9 +5,11 @@ import ca.group13.codecomparator.dto.CompareResponse;
 import ca.group13.codecomparator.service.ClassCompareService;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+/* Helps run comparisons by getting the class list, students in the class, and
+* sending requests to the service. */
 
 @RestController
 @RequestMapping("/api")
@@ -21,31 +23,13 @@ public class ClassCompareController {
 
     // Matches frontend: GET /api/classes
     @GetMapping("/classes")
-    public java.util.List<String> classes(@RequestHeader(value = "Authorization", required = false) String auth) {
-        Map<String, Object> res = service.listClasses();
-
-        Object classes = res.get("classes");
-        if (classes instanceof List<?> raw) {
-            List<String> out = new ArrayList<>(raw.size());
-            for (Object o : raw) out.add(o == null ? "" : o.toString());
-            return out;
-        }
-
-        return List.of();
+    public List<String> classes(@RequestHeader(value = "Authorization", required = false) String auth) {
+        return service.listClasses();
     }
 
     @GetMapping("/class/students")
-    public java.util.List<String> students(@RequestParam("classCode") String classCode, @RequestHeader(value = "Authorization", required = false) String auth) {
-        Map<String, Object> res = service.listStudents(classCode);
-
-        Object students = res.get("students");
-        if (students instanceof List<?> raw) {
-            List<String> out = new ArrayList<>(raw.size());
-            for (Object o : raw) out.add(o == null ? "" : o.toString());
-            return out;
-        }
-
-        return List.of();
+    public List<String> students(@RequestParam("classCode") String classCode, @RequestHeader(value = "Authorization", required = false) String auth) {
+        return service.listStudents(classCode);
     }
 
     @PostMapping("/compare")

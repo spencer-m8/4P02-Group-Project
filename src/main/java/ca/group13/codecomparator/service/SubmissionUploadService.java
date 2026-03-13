@@ -1,5 +1,6 @@
 package ca.group13.codecomparator.service;
 
+import ca.group13.codecomparator.dto.SubmissionUploadResponse;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobServiceClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,12 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayInputStream;
-import java.security.MessageDigest;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+/* Main service for storing submissions. Checks ZIP, uploads to blob, and saves details in DB. */
 
 @Service
 public class SubmissionUploadService {
@@ -34,7 +35,7 @@ public class SubmissionUploadService {
         this.containerName = containerName;
     }
 
-    public Map<String, Object> submissionFromZip(byte[] zipBytes, UUID assignmentId, String studentNumber, String language, Boolean late) {
+    public SubmissionUploadResponse submissionFromZip(byte[] zipBytes, UUID assignmentId, String studentNumber, String language, Boolean late) {
         if (zipBytes == null || zipBytes.length == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file is required");
         }
@@ -58,21 +59,27 @@ public class SubmissionUploadService {
 
         validateZip(zipBytes, lang);
 
-        String sha256 = sha256Hex(zipBytes);
-
         UUID submissionId = UUID.randomUUID();
         String blobKey = "submissions/" + submissionId + ".zip";
 
+        // Build the proper path for blob storage
         BlobClient blobClient = blobServiceClient.getBlobContainerClient(containerName).getBlobClient(blobKey);
 
+        // Upload the ZIP bytes to the blob at the generated path
         try {
             try (ByteArrayInputStream in = new ByteArrayInputStream(zipBytes)) {
                 blobClient.upload(in, zipBytes.length, true);
             }
 
-            insertSubmissionRow(submissionId, assignmentId, studentNumber, blobKey, sha256, lang, late);
+            insertSubmissionRow(submissionId, assignmentId, studentNumber, blobKey, lang, late);
 
-            return Map.of("success", true, "submissionId", submissionId, "assignmentId", assignmentId, "language", lang, "sourceZipKey", blobKey, "zipSha256", sha256);
+            SubmissionUploadResponse out = new SubmissionUploadResponse();
+            out.setSuccess(true);
+            out.setSubmissionId(submissionId);
+            out.setAssignmentId(assignmentId);
+            out.setLanguage(lang);
+            out.setSourceZipKey(blobKey);
+            return out;
 
         } catch (DataAccessException dbEx) {
             try {
@@ -89,22 +96,23 @@ public class SubmissionUploadService {
         }
     }
 
+    // Insert submission details to DB
     @Transactional
-    void insertSubmissionRow(UUID submissionId, UUID assignmentId, String studentNumber, String blobKey, String sha256, String lang, Boolean late) {
+    void insertSubmissionRow(UUID submissionId, UUID assignmentId, String studentNumber, String blobKey, String lang, Boolean late) {
         if (late == null) {
             jdbc.update("""
                     INSERT INTO submissions
-                      (submission_id, assignment_id, encrypted_student, source_zip_key, zip_sha256, language)
+                      (submission_id, assignment_id, encrypted_student, source_zip_key, language)
                     VALUES
-                      (?, ?, ?, ?, ?, ?)
-                    """, submissionId, assignmentId, studentNumber, blobKey, sha256, lang);
+                      (?, ?, ?, ?, ?)
+                    """, submissionId, assignmentId, studentNumber, blobKey, lang);
         } else {
             jdbc.update("""
                     INSERT INTO submissions
-                      (submission_id, assignment_id, late, encrypted_student, source_zip_key, zip_sha256, language)
+                      (submission_id, assignment_id, late, encrypted_student, source_zip_key, language)
                     VALUES
-                      (?, ?, ?, ?, ?, ?, ?)
-                    """, submissionId, assignmentId, late, studentNumber, blobKey, sha256, lang);
+                      (?, ?, ?, ?, ?, ?)
+                    """, submissionId, assignmentId, late, studentNumber, blobKey, lang);
         }
     }
 
@@ -122,6 +130,7 @@ public class SubmissionUploadService {
         return up;
     }
 
+    // Confirms the ZIP contains valid project before upload
     private static void validateZip(byte[] zipBytes, String lang) {
         boolean foundFile = false;
         boolean foundExpected = false;
@@ -152,20 +161,6 @@ public class SubmissionUploadService {
         }
         if (!foundExpected) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ZIP does not contain expected source files for " + lang);
-        }
-    }
-
-    private static String sha256Hex(byte[] bytes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(bytes);
-
-            StringBuilder sb = new StringBuilder(64);
-            for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString();
-
-        } catch (Exception e) {
-            throw new RuntimeException("SHA-256 failed", e);
         }
     }
 }
